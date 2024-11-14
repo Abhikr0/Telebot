@@ -1,5 +1,6 @@
 package resourse;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
@@ -17,7 +18,8 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import java.util.List;
 
 public class Bot extends TelegramLongPollingBot {
-
+    Dotenv dotenv = Dotenv.load();
+    String apikey = dotenv.get("API_KEY");
     private boolean screaming = false;
 
     private InlineKeyboardMarkup keyboardM1;
@@ -30,12 +32,26 @@ public class Bot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "7834110493:AAH8GkkM9A5OtuzytGMYWmVbjnnrSXmVzbw" ;
+        return apikey ;
     }
 
     @Override
     public void onUpdateReceived(Update update) {
 
+        if (update.hasCallbackQuery()) {
+            var callbackQuery = update.getCallbackQuery();
+            var queryId = callbackQuery.getId();
+            var userId = callbackQuery.getFrom().getId();
+            var data = callbackQuery.getData();
+            var msgId = callbackQuery.getMessage().getMessageId();
+
+            try {
+                // Call the buttonTap method to handle the button press
+                buttonTap(userId, queryId, data, msgId);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        }
 
 //        User data
         var msg = update.getMessage();
@@ -53,7 +69,7 @@ public class Bot extends TelegramLongPollingBot {
 
         var url = InlineKeyboardButton.builder()
                 .text("Resources")
-                .url("https://core.telegram.org/bots/api")
+                .url("")
                 .build();
 //        user keyboard
         keyboardM1 =InlineKeyboardMarkup.builder().keyboardRow(List.of(next)).build();
@@ -69,17 +85,11 @@ public class Bot extends TelegramLongPollingBot {
 // conditions
         if(msg.isCommand()){
 
-            if (txt.equals("/scream")){
-                screaming = true;
-            }
-            else if (txt.equals("/whisper")) {
-                screaming = false;
-            }
-            else if (txt.equals("/start")){
-                sendText(userId,welcome);
-            }
-            else if (txt.equals("/menu")){
-                sendMenu(userId,"<b>Menu 1</b>",keyboardM1);
+            switch (txt) {
+                case "/scream" -> screaming = true;
+                case "/whisper" -> screaming = false;
+                case "/start" -> sendText(userId, welcome);
+                case "/menu" -> sendMenu(userId, "<b>Menu 1</b>", keyboardM1);
             }
         }
         if(screaming){
@@ -135,6 +145,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
     private void buttonTap(Long id, String queryId, String data,int msgId) throws TelegramApiException {
+
         EditMessageText newTxt = EditMessageText.builder().chatId(id.toString()).messageId(msgId).text("").build();
 
         EditMessageReplyMarkup newKb = EditMessageReplyMarkup.builder().chatId(id.toString()).messageId(msgId).build();
